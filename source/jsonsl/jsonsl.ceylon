@@ -262,27 +262,24 @@ shared class Serializer(
                 // TODO 
             }
             
-            "A [[JSON Object|JsonObject]] for the given [[instance]] with a key 
+            "A [[JSON Object|JsonObject]] for the given [[reference]] with a key 
              for the type and each of the attributes. 
              Non-[[Identifiable]] attribute values are serialized recursively."
-            shared void serializeRecursively<Instance>(SerializationContext context, SerializableReference<Instance> instance) {
-                if (serializing.contains(instance)) {
+            shared void serializeRecursively<Instance>(SerializationContext context, SerializableReference<Instance> reference) {
+                if (serializing.contains(reference)) {
                     throw AssertionError("cyclic data being serialized in nested format");
                 }
-                if (is Identifiable instance) {
-                    serializing.add(instance);
+                if (is Identifiable reference) {
+                    serializing.add(reference);
                 }
-                assert(is Integer id = instance.id);
-                value savedState = this.setInstance(instance.instance());
+                assert(is Integer id = reference.id);
+                value savedState = this.setInstance(reference.instance());
                 
-                if (instance.clazz.declaration.anonymous) {
-                    
-                } else {
-                    instance.serialize(this);
-                }
+                reference.serialize(this);
+                
                 this.state = savedState;
-                if (is Identifiable instance) {
-                    serializing.remove(instance);
+                if (is Identifiable reference) {
+                    serializing.remove(reference);
                 }
             }
         }// end of dtor
@@ -388,13 +385,8 @@ shared class Deserializer(
         assert(is String idStr = jsonObject.get("$"),
             exists id = parseInteger(idStr));
         Class c = classify(null,jsonObject);
-        if (c.declaration.anonymous) {
-            
-        } else {
-            assert(is DeserializableReference<Anything> ref = context.reference(id, c));
-            //itemRefs.add(ref);
-            ref.deserialize(Dted(attributeMap(ref.clazz.declaration), jsonObject));
-        }
+        assert(is DeserializableReference<Anything> ref = context.reference(id, c));
+        ref.deserialize(Dted(attributeMap(ref.clazz.declaration), jsonObject));
     }
     
     "The objects that were explicitly [[Serializer.add]]ed 

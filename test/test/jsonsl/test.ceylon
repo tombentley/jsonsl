@@ -487,7 +487,7 @@ shared void testArraySequence() {
     print(deserialized);
     assert(1 == deserialized.size);
     assert(is ArraySequence<Integer> as1 = deserialized.first);
-    assert(as1[0] == 1);
+    assert(exists as11 = as1[0], as11 == 1);
     assert(exists as12 = as1[1], as12 == 2);
     assert(exists as13 = as1[2], as13 == 3);
     
@@ -580,7 +580,7 @@ shared void testSingleton() {
     print( deserialized );
     assert(1 == deserialized.size);
     assert(is Singleton<Comparison> t = deserialized.first);
-    assert(smaller==t[0]);
+    assert(exists t0=t[0], smaller==t0);
 }
 
 serializable class Person(first, last, address) {
