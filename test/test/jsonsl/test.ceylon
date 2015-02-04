@@ -638,3 +638,71 @@ shared void testCustom() {
 
 
 // TODO test language module things which are not Identifiable
+
+test
+shared void dupeId() {
+    value fdr = Person{
+        first="Fred";
+        last="Rooseveldt";
+        address=Address{
+            houseNumberName = "1600";
+            street="Pennsylvania Avenue";
+            town = "Washington, DC";
+            country="USA";
+        };
+    };
+    value nixon = Person{
+        first="Richard";
+        last="Nixon";
+        address=Address{
+            houseNumberName = "1600";
+            street="Pennsylvania Avenue";
+            town = "Washington, DC";
+            country="USA";
+        };
+    };
+    variable value s = Serializer();
+    s.add(fdr);
+    print(s.pretty);
+    value fdrJson = s.pretty.replaceFirst("[", "").replaceLast("]", "");
+    s = Serializer();
+    s.add(nixon);
+    print(s.pretty);
+    value nixonJson = s.pretty.replaceFirst("[", "").replaceLast("]", "");
+    
+    value d = Deserializer();
+    value deser = d.parse("[``fdrJson``, ``nixonJson``]");
+    print(deser);
+    assert(1 == deser.size);
+    assert(is Person fdr2 = deser.first);
+    assert("Fred" == fdr2.first,
+        "Rooseveldt" ==  fdr2.last);
+}
+
+test
+shared void dupeId2() {
+    value whiteHouse = Address{
+            houseNumberName = "1600";
+            street="Pennsylvania Avenue";
+            town = "Washington, DC";
+            country="USA";
+        };
+    value fdr = Person{
+        first="Fred";
+        last="Rooseveldt";
+        address=whiteHouse;
+    };
+    variable value s = Serializer();
+    s.add(fdr);
+    value fdrJson = s.pretty.replaceFirst("[", "").replaceLast("]", "");
+    s = Serializer();
+    s.add(whiteHouse);
+    value whiteHouseJson = s.pretty.replaceFirst("[", "").replaceLast("]", "");
+    value d = Deserializer();
+    value deser = d.parse("[``fdrJson``, ``whiteHouseJson``]");
+    print(deser);
+    assert(1 == deser.size);
+    assert(is Person fdr2 = deser.first);
+    assert("Fred" == fdr2.first,
+        "Rooseveldt" ==  fdr2.last);
+}

@@ -385,8 +385,11 @@ shared class Deserializer(
         assert(is String idStr = jsonObject.get("$"),
             exists id = parseInteger(idStr));
         Class c = classify(null,jsonObject);
-        assert(is DeserializableReference<Anything> ref = context.reference(id, c));
-        ref.deserialize(Dted(attributeMap(ref.clazz.declaration), jsonObject));
+        if (!exists r = context.getReference(id)) {
+            // ignore dupe ids
+            assert(is DeserializableReference<Anything> ref = context.reference(id, c));
+            ref.deserialize(Dted(attributeMap(ref.clazz.declaration), jsonObject));
+        }
     }
     
     "The objects that were explicitly [[Serializer.add]]ed 
