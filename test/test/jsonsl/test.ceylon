@@ -338,9 +338,10 @@ shared void testArray() {
     a.set(1, "hello");
     a.set(2, 3);
     a.set(3, true);
-    a.set(4, Point(0.0, 0.0));
+    a.set(4, Point(1.0, 2.0));
     value s = Serializer();
     s.add(a);
+    print(s.pretty);
     assertEquals("""[
                      {
                       "$": "0",
@@ -355,8 +356,8 @@ shared void testArray() {
                      {
                       "$": "-1",
                       "$type": "test.jsonsl::Point",
-                      "x": 0.0,
-                      "y": 0.0
+                      "x": 1.0,
+                      "y": 2.0
                      }
                     ]""",
     s.pretty);
@@ -372,8 +373,9 @@ shared void testArray() {
         3 == three);
     assert(is Boolean yes=deserializedArray[3],
         yes);
-    assert(is Point origin=deserializedArray[4],
-        origin == Point(0.0, 0.0));
+    assert(is Point oneTwo=deserializedArray[4]);
+    print(oneTwo);
+    assert(oneTwo == Point(1.0, 2.0));
 }
 
 test
