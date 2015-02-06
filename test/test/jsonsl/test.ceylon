@@ -378,6 +378,31 @@ shared void testArray() {
     assert(oneTwo == Point(1.0, 2.0));
 }
 
+test 
+shared void testCyclicArray() {
+    Array<Anything> a = arrayOfSize<Anything>(1, null);
+    a.set(0, a);
+    Array<Anything> b = arrayOfSize<Anything>(1, null);
+    Array<Anything> c = arrayOfSize<Anything>(1, null);
+    b.set(0, c);
+    c.set(0, b);
+    value s = Serializer();
+    s.add(a);
+    s.add(b);
+    print(s.pretty);
+    value d = Deserializer();
+    value deserialized = d.parse(s.json).sequence();
+    assert(deserialized.size == 2);
+    assert(is Array<Anything> dsA = deserialized.first);
+    assert(is Identifiable dsA1 = dsA[0]);
+    assert(dsA === dsA1);
+    
+    assert(is Array<Anything> dsB = deserialized[1]);
+    assert(is Array<Anything> dsC=dsB[0]);
+    assert(is Array<Anything> dsB2=dsC[0]);
+    assert(dsB===dsB2);
+}
+
 test
 shared void testArrayOfInteger() {
     Array<Integer> a = arrayOfSize<Integer>(3, 1);
