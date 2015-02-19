@@ -167,9 +167,6 @@ shared class Serializer(
                 return jsonKey;
             }
             
-            shared actual void putTypeArgument(TypeParameter typeParameter, Type typeArgument) {
-                //TODO
-            }
             
             function byReference<Instance>(Instance referredValue, ValueDeclaration? attribute) {
                 switch (referredValue)
@@ -432,14 +429,6 @@ shared class Deserializer(
             return nothing;
         }
         
-        "The type argument of the given type parameter."
-        throws (`class AssertionError`,
-            "if the type argument is absent")
-        shared actual Type getTypeArgument(TypeParameter typeParameter) {
-            // TODO
-            return nothing;
-        }
-        
         "The value of the given attribute."
         throws (`class AssertionError`,
             "if the value is absent")
@@ -520,17 +509,23 @@ shared class Deserializer(
                 throw;
             } else if (exists v = obj[index.string+"@"]) {
                 assert(is Integer v);
-                assert(is Reference<Instance> x = context.getReference(v));
+                assert(exists x = context.getReference(v));
                 return x;
             }
             throw;
         }
         
-        shared actual Iterator<[ValueDeclaration, Anything]> iterator() {
-            return object satisfies Iterator<[ValueDeclaration, Anything]> {
+        shared actual Iterator<[ValueDeclaration|Integer, Anything]> iterator() {
+            return object satisfies Iterator<[ValueDeclaration|Integer, Anything]> {
                 Iterator<String->JsonValue> i = obj.iterator(); 
-                shared actual [ValueDeclaration, Anything]|Finished next() {
+                shared actual [ValueDeclaration|Integer, Anything]|Finished next() {
                     if (!is Finished n=i.next()) {
+                        if (n.key.endsWith("@")) {
+                            // array element is reference 
+                            if (exists index = parseInteger(n.key[0:n.key.size-1])) {
+                                return [index, getElement(index)];
+                            }
+                        }
                         if (exists firstChar = n.key.first,
                             !firstChar.letter) {
                             // ignore $, $type, 0, 0$ etc
