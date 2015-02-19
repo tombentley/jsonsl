@@ -180,10 +180,22 @@ shared void test1() {
         deserializer.add(jsonObject);
     }
     // now iterate the deserialized items
-    for (x in deserializer.items) {
-        print(x);
-    }
-    // TODO assertions
+    value deserialized = deserializer.items.sequence();
+    assert(4 == deserialized.size);
+    assert(is Line line = deserialized[0],
+        line.start == origin,
+        line.end == x1y1);
+    assert(is Arrow arrow1 = deserialized[1],
+        arrow1.start == origin,
+        arrow1.end == x1y1,
+        arrow1.tip.description == "pointy");
+    assert(is Arrow arrow2 = deserialized[2],
+        arrow2.start == x1y1,
+        arrow2.end == origin,
+        arrow2.tip.description == "pointy");
+    assert(is Disk disk = deserialized[3],
+        disk.centre == origin,
+        disk.radius == 1.0);
 }
 
 
@@ -542,12 +554,11 @@ shared void testMeasure() {
     assert(s1 == 0:10);
 }
 
-/*test
+test
 shared void testEmpty() {
     value s = Serializer();
     s.add(empty);
     print(s.pretty);
-    // TODO this doesn't work!
     assertEquals("""[
                      {
                       "$": "0",
@@ -560,7 +571,7 @@ shared void testEmpty() {
     assert(deserialized.size == 1);
     assert(exists e = deserialized.first,
             e == empty);
-}*/
+}
 
 test
 shared void testTupleWithEmptyTail() {
