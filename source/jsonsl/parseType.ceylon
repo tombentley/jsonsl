@@ -9,8 +9,7 @@ import ceylon.language.meta.declaration {
     AliasDeclaration,
     ValueDeclaration,
     FunctionDeclaration,
-    NestableDeclaration,
-    ClassDeclaration
+    NestableDeclaration
 }
 import ceylon.language.meta.model {
     Type,
@@ -336,48 +335,48 @@ shared Type parseType(String t) => TypeParser(t).parse();
    typeArgments := '<' intersectionType (',' intersectionType)* '>';
    
    """
-class ModelParser(String input) {
-    
-    value tokenizer = Tokenizer(input);
+class ModelParser() {
+    value modulesList = modules.list;
     
     """input ::= intersectionType ;"""
-    shared Model|Type|ConstructorModel parse() {
-        value result = intersectionModel();
+    shared Model|Type|ConstructorModel parse(String input) {
+        value tokenizer = Tokenizer(input);
+        value result = intersectionModel(tokenizer);
         tokenizer.expect(dtEoi);
         return result;
     }
     
     """intersectionType ::= unionType ('&' intersectionType) ;"""
-    Model|Type|ConstructorModel intersectionModel() {
-        variable value result = unionModel();
+    Model|Type|ConstructorModel intersectionModel(Tokenizer tokenizer) {
+        variable value result = unionModel(tokenizer);
         if (tokenizer.isType(dtAnd)) {
             assert(is Type u1=result);
-            assert(is Type u2 = unionModel());
+            assert(is Type u2 = unionModel(tokenizer));
             result = u1.intersection(u2);
         }
         return result;
     }
     
     """unionType ::= simpleType ('|' intersectionType) ;"""
-    Model|Type|ConstructorModel unionModel() {
-        variable value result = qualifiedModel();
+    Model|Type|ConstructorModel unionModel(Tokenizer tokenizer) {
+        variable value result = qualifiedModel(tokenizer);
         if (tokenizer.isType(dtOr)) {
             assert(is Type u1=result);
-            assert(is Type u2 = intersectionModel());
+            assert(is Type u2 = intersectionModel(tokenizer));
             result = u1.union(u2);
         }
         return result;
     }
     
     """qualifiedModel ::= qualifiedDeclaration typeArguments? ('.' declarationName  typeArguments?)* ;"""
-    Model|Type|ConstructorModel qualifiedModel() {
-        value d = declaration();
-        Type[]? ta = typeArguments();
+    Model|Type|ConstructorModel qualifiedModel(Tokenizer tokenizer) {
+        value d = declaration(tokenizer);
+        Type[]? ta = typeArguments(tokenizer);
         if (is ClassOrInterfaceDeclaration d) {
             variable Model|Type|ConstructorModel result = d.apply<Anything>(*(ta else []));
             while (tokenizer.isType(dtDot)) {
-                value m = declarationName();
-                value mta = typeArguments();
+                value m = declarationName(tokenizer);
+                value mta = typeArguments(tokenizer);
                 if (is ClassOrInterface container=result) {
                     if (is ClassOrInterface c = container.getClassOrInterface(m, *(mta else []))) {
                         result = c;
@@ -422,10 +421,10 @@ class ModelParser(String input) {
     }
     
     """qualifiedDeclaration ::= packageName '::' declarationName ;"""
-    Type<Nothing>|TypedDeclaration declaration() {
-        Package p = packageName();
+    Type<Nothing>|TypedDeclaration declaration(Tokenizer tokenizer) {
+        Package p = packageName(tokenizer);
         tokenizer.expect(dtDColon);
-        value t = declarationName();
+        value t = declarationName(tokenizer);
         if (exists r = p.getMember<NestableDeclaration>(t)) {
             /*if (is ClassDeclaration r,
                 exists o=r.objectValue) {
@@ -444,12 +443,12 @@ class ModelParser(String input) {
     }
     
     """typeArgments := '<' intersectionType (',' intersectionType)* '>';"""
-    Type[]? typeArguments() {
+    Type[]? typeArguments(Tokenizer tokenizer) {
         if (tokenizer.isType(dtLt)) {
-            assert(is Type t1 = intersectionModel());
+            assert(is Type t1 = intersectionModel(tokenizer));
             variable Type[] result = [t1];
             while(tokenizer.isType(dtComma)) {
-                value t2 = intersectionModel();
+                value t2 = intersectionModel(tokenizer);
                 assert(is Type t2);
                 result = result.withTrailing(t2);
             }
@@ -461,7 +460,7 @@ class ModelParser(String input) {
     }
     
     """declarationName ::= typeName | memberName ;"""
-    String declarationName() {
+    String declarationName(Tokenizer tokenizer) {
         if (tokenizer.current.type == dtUpper
             || tokenizer.current.type == dtLower) {
             return tokenizer.consume();
@@ -471,14 +470,14 @@ class ModelParser(String input) {
     }
     
     """packageName ::= lident (. lident)* ;"""
-    Package packageName() {
+    Package packageName(Tokenizer tokenizer) {
         variable Integer start = tokenizer.index;
         variable Module? mod = null;
         tokenizer.expect(dtLower);
         while (true) {
             if (!mod exists) {
                 value xx = tokenizer.input.measure(start, tokenizer.index-start);
-                for (m in modules.list) {
+                for (m in modulesList) {
                     if (m.name == xx) {
                         mod = m;
                         //start = tokenizer.index;
@@ -497,7 +496,7 @@ class ModelParser(String input) {
     }
 }
 
-shared Model|Type|ConstructorModel parseModel(String t) => ModelParser(t).parse();
+Model|Type|ConstructorModel parseModel(String t) => ModelParser().parse(t);
 
 shared void testParseModel() {
     assert(`String` == parseModel("ceylon.language::String"));

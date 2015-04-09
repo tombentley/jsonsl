@@ -28,7 +28,7 @@ import ceylon.language.meta.model {
 serializable class Point {
     shared Float x;
     shared Float y;
-    shared new Point(Float x, Float y) {
+    shared new (Float x, Float y) {
         this.x = x;
         this.y = y;
     }
@@ -743,4 +743,28 @@ shared void dupeId2() {
     assert(is Person fdr2 = deser.first);
     assert("Fred" == fdr2.first,
         "Rooseveldt" ==  fdr2.last);
+}
+
+serializable class LongRun(String s) {
+    shared String s1 = s;
+    shared String s2 = s;
+    shared String s3 = s;
+    shared String s4 = s;
+    shared String s5 = s;
+    shared String s6 = s;
+    shared String s7 = s;
+    shared String s8 = s;
+    shared String s9 = s;
+    shared String s10 = s;
+}
+
+test
+shared void longrun() {
+    value t0 = system.nanoseconds;
+    value s = Serializer();
+    for (i in 0:10_000) {
+        s.add(LongRun(i.string));
+    }
+    print(s.pretty);
+    print("Took ``(system.nanoseconds-t0)/1_000_000.0``ms");
 }

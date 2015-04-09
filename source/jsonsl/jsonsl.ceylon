@@ -1,28 +1,7 @@
-import ceylon.language.serialization {
-    Reference,
-    serialization,
-    SerializableReference,
-    SerializationContext,
-    deserialization,
-    DeserializableReference,
-    RealizableReference,
-    Deconstructed,
-    Deconstructor
-}
-import ceylon.language.meta {
-    type, 
-    optionalAnnotation,
-    typeLiteral
-}
-import ceylon.language.meta.model {
-    Class,
-    Type,
-    ClassModel
-}
-import ceylon.language.meta.declaration {
-    ValueDeclaration,
-    ClassDeclaration,
-    TypeParameter
+import ceylon.collection {
+    HashMap,
+    HashSet,
+    IdentitySet
 }
 import ceylon.json {
     JsonObject=Object,
@@ -34,10 +13,29 @@ import ceylon.json {
     Visitor,
     StringEmitter
 }
-import ceylon.collection {
-    HashMap,
-    HashSet,
-    IdentitySet
+import ceylon.language.meta {
+    type,
+    optionalAnnotation,
+    typeLiteral
+}
+import ceylon.language.meta.declaration {
+    ValueDeclaration,
+    ClassDeclaration
+}
+import ceylon.language.meta.model {
+    Class,
+    ClassModel
+}
+import ceylon.language.serialization {
+    Reference,
+    serialization,
+    SerializableReference,
+    SerializationContext,
+    deserialization,
+    DeserializableReference,
+    RealizableReference,
+    Deconstructed,
+    Deconstructor
 }
 
 """Annotation class for attributes that should be persisted "by value" 
@@ -310,15 +308,17 @@ shared class Serializer(
     
 }
 
+ModelParser mp = ModelParser();
+
 Class parseClassName(String className) {
-    value type = parseModel(className);
+    value type = mp.parse(className);
     assert(is Class type);
     return type;
 }
 "The Ceylon Class that the given JSON hash encodes."
 Class getClass(String? key, JsonObject obj) {
     assert(is String className = obj.get("$type"));
-    value klass = parseModel(className);
+    value klass = mp.parse(className);
     assert(is Class klass);
     return klass;
 }
