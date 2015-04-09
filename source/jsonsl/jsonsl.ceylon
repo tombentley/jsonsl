@@ -79,6 +79,11 @@ void defaultAddClassifier(Visitor visitor, ClassModel<Anything,Nothing> cls) {
     visitor.onString(cls.string);
 }
 
+class SerState(cls, attrs) {
+    shared ClassDeclaration cls;
+    shared HashSet<String> attrs;
+}
+
 "Serializes objects to a form representible as a JSON hash."
 shared class Serializer(
     "Callback to add type information to the JSON hash 
@@ -109,6 +114,23 @@ shared class Serializer(
      Such ids increment from [[runtime.minIntegerValue]]."
     variable Integer nested = runtime.minIntegerValue;
     
+    value nestedCache = HashMap<ClassDeclaration|ValueDeclaration, Nested?>();
+    function lookupNested(ClassDeclaration|ValueDeclaration attribute) {
+        if (!nestedCache.defines(attribute)) {
+            nestedCache.put(attribute, optionalAnnotation(`Nested`, attribute));
+        }
+        return nestedCache[attribute];
+    }
+    
+    value jsonKeyCache = HashMap<ValueDeclaration, JsonKey?>();
+    
+    function lookupJsonKey(ValueDeclaration attribute) {
+        if (!jsonKeyCache.defines(attribute)) {
+            jsonKeyCache.put(attribute, optionalAnnotation(`JsonKey`, attribute));
+        }
+        return jsonKeyCache[attribute];
+    }
+    
     "Adds an instance to be serialized. 
      
      The given instance and every 
@@ -131,13 +153,13 @@ shared class Serializer(
             //variable ClassDeclaration? cls = null;
             
             "Mutable state that changes as we recurse though the object graph"
-            variable [ClassDeclaration, HashSet<String>]? state = null;
+            variable SerState? state = null;
             
             function setInstance(Anything instance) {
                 ClassModel cls = type(instance);
                 addClassifier(visitor, cls);
                 value oldState = this.state;
-                this.state = [cls.declaration, HashSet<String>()];
+                this.state = SerState(cls.declaration, HashSet<String>());
                 return oldState;
             }
             
@@ -146,7 +168,7 @@ shared class Serializer(
                 "The attribute we're putting"
                 ValueDeclaration attribute;
                 variable String jsonKey;
-                if (exists key = optionalAnnotation(`JsonKey`, attribute)) {
+                if (exists key = lookupJsonKey(attribute)) {
                     jsonKey = key.key;
                 } else {
                     jsonKey = attribute.name;
@@ -154,7 +176,7 @@ shared class Serializer(
                 if (ref) {
                     jsonKey = jsonKey + "@";
                 }
-                value hashSet = (state else nothing)[1];
+                value hashSet = (state else nothing).attrs;
                 Boolean hasKey = hashSet.contains(jsonKey);
                 if (hasKey) {
                     throw AssertionError("ambiguous JSON key ``jsonKey`` "+
@@ -174,10 +196,10 @@ shared class Serializer(
                 else {
                     if (!referredValue is Identifiable) {
                         return false;
-                    } else if (optionalAnnotation(`Nested`, (this.state else nothing)[0]) exists) {
+                    } else if (lookupNested((this.state else nothing).cls) exists) {
                         return false;
                     } else if (exists attribute) {
-                        if (optionalAnnotation(`Nested`, attribute) exists) {
+                        if (lookupNested(attribute) exists) {
                             return false;
                         } else {
                             return true;
@@ -350,6 +372,15 @@ shared class Deserializer(
      is, because by definition nothing can refer to it."
     variable value anon = runtime.minIntegerValue; 
     
+    value jsonKeyCache = HashMap<ValueDeclaration, JsonKey?>();
+    
+    function lookupJsonKey(ValueDeclaration attribute) {
+        if (!jsonKeyCache.defines(attribute)) {
+            jsonKeyCache.put(attribute, optionalAnnotation(`JsonKey`, attribute));
+        }
+        return jsonKeyCache[attribute];
+    }
+    
     "A map of JSON key name to ValueDeclaration for the given ClassDeclaration"
     Map<String,ValueDeclaration> attributeMap(ClassDeclaration klass) {
         // XXX could use structural sharing based on the class hierarchy
@@ -361,7 +392,7 @@ shared class Deserializer(
             while (exists cde = cd) {
                 for (ValueDeclaration attr in cde.declaredMemberDeclarations<ValueDeclaration>()) {
                     String name;
-                    if (exists jsonKey = optionalAnnotation(`JsonKey`, attr)) {
+                    if (exists jsonKey = lookupJsonKey(attr)) {
                         name = jsonKey.key;
                     } else {
                         name = attr.name;
@@ -392,7 +423,7 @@ shared class Deserializer(
     "The objects that were explicitly [[Serializer.add]]ed 
      to the `Serializer`."
     shared {Anything*} items {
-        return context.map<Anything>(function(ref) {
+        return context.collect<Anything>(function(ref) {
             if (is RealizableReference<Anything> ref) {
                 if (is Integer id = ref.id,
                         id >= 0) {
@@ -434,7 +465,7 @@ shared class Deserializer(
             "if the value is absent")
         shared actual Instance|Reference<Instance> getValue<Instance>(ValueDeclaration attribute){
             String name;
-            if (exists jsonKey = optionalAnnotation(`JsonKey`, attribute)) {
+            if (exists jsonKey = lookupJsonKey(attribute)) {
                 name = jsonKey.key;
             } else {
                 name = attribute.name;
